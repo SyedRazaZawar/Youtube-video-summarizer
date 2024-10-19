@@ -6,11 +6,6 @@ from io import BytesIO
 from youtube_transcript_api import YouTubeTranscriptApi, NoTranscriptFound, TranscriptsDisabled
 from youtube_transcript_api.formatters import SRTFormatter
 
-# API URLs and headers for Hugging Face
-API_URL_SUMMARIZATION = "https://api-inference.huggingface.co/models/facebook/bart-large-cnn"
-API_URL_TTS = "https://api-inference.huggingface.co/models/espnet/kan-bayashi_ljspeech_vits"
-headers = {"Authorization": "Bearer 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"}  # Replace 'your_hf_API_token' with your actual Hugging Face API token.
-
 # Streamlit webpage configuration
 st.set_page_config(page_title="YouTube Caption, Summarizer, and TTS", layout="wide")
 
@@ -23,13 +18,12 @@ def fetch_video_info(url):
         return None, None, False
 
 def display_thumbnail(url):
-    try:
-        response = requests.get(url)
-        if response.status_code == 200:
-            image = Image.open(BytesIO(response.content))
-            st.image(image, caption="Video Thumbnail", use_column_width=True)
-    except Exception as e:
-        st.error(f"Failed to display thumbnail: {str(e)}")
+    response = requests.get(url)
+    if response.status_code == 200:
+        image = Image.open(BytesIO(response.content))
+        st.image(image, caption="Video Thumbnail", use_column_width=True)
+    else:
+        st.error("Failed to load thumbnail.")
 
 def fetch_captions(video_id):
     try:
@@ -37,46 +31,15 @@ def fetch_captions(video_id):
         transcript = transcript_list.find_transcript(['en'])
         formatter = SRTFormatter()
         return formatter.format_transcript(transcript.fetch()), True
-    except (NoTranscriptFound, TranscriptsDisabled):
-        st.warning("No available captions or transcripts are disabled for this video.")
+    except NoTranscriptFound:
+        st.warning("No captions found for this video.")
+        return "", False
+    except TranscriptsDisabled:
+        st.warning("Captions are disabled for this video.")
         return "", False
     except Exception as e:
         st.error(f"An error occurred while fetching captions: {str(e)}")
         return "", False
-
-def query_summarization_api(text, min_length, max_length):
-    # Ensure the text length does not exceed a certain threshold
-    truncated_text = text[:max_length]  # Adjust as necessary based on your model's capabilities
-    try:
-        json_payload = {
-            "inputs": truncated_text,
-            "parameters": {
-                "min_length": min_length,
-                "max_length": max_length,
-                "do_sample": False  # Ensure deterministic outputs
-            }
-        }
-        response = requests.post(API_URL_SUMMARIZATION, headers=headers, json=json_payload)
-        if response.status_code == 200:
-            return response.json()
-        else:
-            st.error(f"API error: {response.status_code} - {response.text}")
-            return None
-    except Exception as e:
-        st.error(f"Failed to call summarization API: {str(e)}")
-        return None
-
-def query_tts_api(text):
-    try:
-        response = requests.post(API_URL_TTS, headers=headers, json={"inputs": text})
-        if response.status_code == 200:
-            return response.content  # Binary audio data
-        else:
-            st.error(f"API error: {response.status_code} - {response.text}")
-            return None
-    except Exception as e:
-        st.error(f"Failed to call TTS API: {str(e)}")
-        return None
 
 def main():
     st.title("YouTube Caption, Summarizer, and TTS")
@@ -86,22 +49,11 @@ def main():
         video_id, thumbnail_url, video_fetched = fetch_video_info(url)
         if video_fetched:
             display_thumbnail(thumbnail_url)
-
             captions, captions_fetched = fetch_captions(video_id)
             if captions_fetched:
                 st.text_area("Captions", captions, height=300)
-
-                min_length = st.sidebar.slider("Min Length", 10, 100, 50)
-                max_length = st.sidebar.slider("Max Length", 101, 1000, 150)  # Adjust these limits as necessary
-
-                if st.button("Summarize Captions"):
-                    with st.spinner('Summarizing...'):
-                        output = query_summarization_api(captions, min_length, max_length)
-                        if output and 'summary_text' in output:
-                            st.text_area("Summary", output['summary_text'], height=200)
-                        else:
-                            st.error("Failed to get a valid response from the summarization API.")
-
+            else:
+                st.error("Failed to fetch or process captions.")
         else:
             st.error("Failed to fetch video data. Check the provided URL.")
 
