@@ -45,24 +45,25 @@ if st.button('Fetch Transcript'):
         transcript = fetch_transcript(video_id)
         if transcript:
             st.text_area("Transcript", transcript, height=250)
-            
-            if st.button('Summarize Transcript'):
-                summary = summarize_text(transcript)
-                st.session_state['summary'] = summary  # Store summary in session state
 
-            if 'summary' in st.session_state:
-                st.text_area("Summary", st.session_state['summary'], height=150)
-                
-                if st.button('Convert Summary to Audio'):
-                    audio_file = text_to_audio(st.session_state['summary'])
-                    st.audio(audio_file)
-                    with open(audio_file, "rb") as file:
-                        st.download_button(
-                            label="Download Summary Audio",
-                            data=file,
-                            file_name='summary_audio.mp3',
-                            mime='audio/mp3'
-                        )
+# Summarize transcript button and summary display
+if 'transcript' in st.session_state:
+    if st.button('Summarize Transcript'):
+        st.session_state['summary'] = summarize_text(st.session_state['transcript'])
+
+if 'summary' in st.session_state:
+    st.text_area("Summary", st.session_state['summary'], height=150)
+
+    if st.button('Convert Summary to Audio'):
+        audio_file = text_to_audio(st.session_state['summary'])
+        st.audio(audio_file)
+        with open(audio_file, "rb") as file:
+            st.download_button(
+                label="Download Summary Audio",
+                data=file,
+                file_name='summary_audio.mp3',
+                mime='audio/mp3'
+            )
 
 # Ensure local assets directory exists for saving audio files
 if not os.path.exists('audio'):
