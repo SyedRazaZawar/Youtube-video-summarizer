@@ -90,7 +90,7 @@ def main():
                         if output and 'summary_text' in output:
                             st.session_state['summary'] = output['summary_text']
                         else:
-                            st.session_state['summary'] = "Failed to get a valid response from the summarization API."
+                            st.session_state['summary'] = output['summary_text']
                     
                 if 'summary' in st.session_state:
                     st.text_area("Summary", st.session_state['summary'], height=200)
