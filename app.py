@@ -17,10 +17,10 @@ st.set_page_config(page_title="YouTube Caption, Summarizer, and TTS", layout="wi
 def fetch_video_info(url):
     try:
         yt = YouTube(url)
-        return yt.video_id, yt.thumbnail_url
+        return yt.video_id, yt.thumbnail_url, True
     except Exception as e:
         st.error(f"Error fetching video info: {str(e)}")
-        return None, None
+        return None, None, False
 
 def display_thumbnail(url):
     try:
@@ -28,8 +28,6 @@ def display_thumbnail(url):
         if response.status_code == 200:
             image = Image.open(BytesIO(response.content))
             st.image(image, caption="Video Thumbnail", use_column_width=True)
-        else:
-            st.warning("Failed to load thumbnail.")
     except Exception as e:
         st.error(f"Failed to display thumbnail: {str(e)}")
 
@@ -38,10 +36,13 @@ def fetch_captions(video_id):
         transcript_list = YouTubeTranscriptApi.list_transcripts(video_id)
         transcript = transcript_list.find_transcript(['en'])
         formatter = SRTFormatter()
-        return formatter.format_transcript(transcript.fetch())
+        return formatter.format_transcript(transcript.fetch()), True
     except (NoTranscriptFound, TranscriptsDisabled):
         st.warning("No available captions or transcripts are disabled for this video.")
-        return None
+        return "", False
+    except Exception as e:
+        st.error(f"An error occurred while fetching captions: {str(e)}")
+        return "", False
 
 def query_summarization_api(text, min_length, max_length):
     try:
@@ -64,19 +65,13 @@ def main():
     url = st.text_input("Enter YouTube video URL", "")
 
     if url:
-        video_id, thumbnail_url = fetch_video_info(url)
-        if video_id:
-            st.session_state['video_id'] = video_id
+        video_id, thumbnail_url, video_fetched = fetch_video_info(url)
+        if video_fetched:
             display_thumbnail(thumbnail_url)
 
-            captions = fetch_captions(video_id)
-            if captions is None:  # If fetching captions fails
-                captions = st.text_area("Enter captions manually:", height=300)
-                st.session_state['captions'] = captions
-
+            captions, captions_fetched = fetch_captions(video_id)
             if captions:
                 st.text_area("Captions", captions, height=300)
-                st.session_state['captions'] = captions
 
                 min_length = st.sidebar.slider("Min Length", 10, 500, 50)
                 max_length = st.sidebar.slider("Max Length", 50, 1000, 200)
@@ -85,22 +80,19 @@ def main():
                     with st.spinner('Summarizing...'):
                         output = query_summarization_api(captions, min_length, max_length)
                         if output and 'summary_text' in output:
-                            st.session_state['summary'] = output['summary_text']
-                            st.text_area("Summary", st.session_state['summary'], height=200)
+                            st.text_area("Summary", output['summary_text'], height=200)
 
                             if st.button("Generate Audio for Summary"):
                                 with st.spinner('Generating audio...'):
-                                    audio_data = query_tts_api(st.session_state['summary'])
+                                    audio_data = query_tts_api(output['summary_text'])
                                     if audio_data:
                                         audio_file_path = "summary_audio.wav"
                                         with open(audio_file_path, "wb") as f:
                                             f.write(audio_data)
                                         st.audio(audio_file_path)
                                         st.download_button("Download Audio", audio_data, file_name="summary_audio.wav", mime="audio/wav")
-                                    else:
-                                        st.error("Failed to generate audio.")
-                else:
-                    st.error("Failed to fetch video data. Check the provided URL.")
+        else:
+            st.error("Failed to fetch video data. Check the provided URL.")
 
 if __name__ == "__main__":
     main()
