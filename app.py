@@ -4,10 +4,10 @@ from transformers import pipeline
 from gtts import gTTS
 import os
 
-# Set up the title of the Streamlit app
+# Initialize Streamlit app layout
 st.title('YouTube Video Transcript Summarizer and Audio Converter')
 
-# User input for YouTube video URL
+# Input field for YouTube video URL
 video_url = st.text_input('Enter YouTube video URL:', '')
 
 def get_video_id(url):
@@ -46,11 +46,16 @@ if st.button('Fetch Transcript'):
         transcript = fetch_transcript(video_id)
         if transcript:
             st.text_area("Transcript", transcript, height=250)
-            # The button to summarize is displayed only if there is no summary in session state
-            if 'summary' not in st.session_state:
+            if 'show_summarize_button' not in st.session_state:
+                st.session_state['show_summarize_button'] = True  # Enable summarization button initially
+
+            if st.session_state.get('show_summarize_button'):
                 if st.button('Summarize Transcript'):
-                    st.session_state['summary'] = summarize_text(transcript)
-            if 'summary' in st.session_state:
+                    summary = summarize_text(transcript)
+                    st.session_state['summary'] = summary  # Store summary in session state
+                    st.session_state['show_summarize_button'] = False  # Hide summarize button after click
+
+            if 'summary' in st.session_state and not st.session_state['show_summarize_button']:
                 st.text_area("Summary", st.session_state['summary'], height=150)
                 if st.button('Convert Summary to Audio'):
                     audio_file = text_to_audio(st.session_state['summary'])
@@ -63,6 +68,6 @@ if st.button('Fetch Transcript'):
                             mime='audio/mp3'
                         )
 
-# Creating a directory to store audio files, if it doesn't exist
+# Ensure local assets directory exists for saving audio files
 if not os.path.exists('audio'):
     os.makedirs('audio')
