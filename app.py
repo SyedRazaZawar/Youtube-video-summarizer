@@ -47,7 +47,11 @@ def fetch_captions(video_id):
 def query_summarization_api(text, min_length, max_length):
     try:
         response = requests.post(API_URL_SUMMARIZATION, headers=headers, json={"inputs": text, "parameters": {"min_length": min_length, "max_length": max_length}})
-        return response.json()
+        if response.status_code == 200:
+            return response.json()
+        else:
+            st.error(f"API error: {response.status_code}, {response.text}")
+            return None
     except Exception as e:
         st.error(f"Failed to call summarization API: {str(e)}")
         return None
@@ -55,7 +59,11 @@ def query_summarization_api(text, min_length, max_length):
 def query_tts_api(text):
     try:
         response = requests.post(API_URL_TTS, headers=headers, json={"inputs": text})
-        return response.content  # Binary audio data
+        if response.status_code == 200:
+            return response.content  # Binary audio data
+        else:
+            st.error(f"API error: {response.status_code}, {response.text}")
+            return None
     except Exception as e:
         st.error(f"Failed to call TTS API: {str(e)}")
         return None
@@ -70,7 +78,7 @@ def main():
             display_thumbnail(thumbnail_url)
 
             captions, captions_fetched = fetch_captions(video_id)
-            if captions:
+            if captions_fetched:
                 st.text_area("Captions", captions, height=300)
 
                 min_length = st.sidebar.slider("Min Length", 10, 500, 50)
@@ -80,11 +88,12 @@ def main():
                     with st.spinner('Summarizing...'):
                         output = query_summarization_api(captions, min_length, max_length)
                         if output and 'summary_text' in output:
-                            st.text_area("Summary", output['summary_text'], height=200)
+                            summary = output['summary_text']
+                            st.text_area("Summary", summary, height=200)
 
                             if st.button("Generate Audio for Summary"):
                                 with st.spinner('Generating audio...'):
-                                    audio_data = query_tts_api(output['summary_text'])
+                                    audio_data = query_tts_api(summary)
                                     if audio_data:
                                         audio_file_path = "summary_audio.wav"
                                         with open(audio_file_path, "wb") as f:
