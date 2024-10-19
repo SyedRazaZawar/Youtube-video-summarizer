@@ -1,7 +1,7 @@
 import streamlit as st
 from youtube_transcript_api import YouTubeTranscriptApi
 from transformers import pipeline
-from gtts import gTTS
+from gtTTS import gTTS
 import os
 
 # Streamlit app layout
@@ -45,14 +45,17 @@ if st.button('Fetch Transcript'):
         transcript = fetch_transcript(video_id)
         if transcript:
             st.text_area("Transcript", transcript, height=250)
-            if st.button('Summarize Transcript'):
-                summary = summarize_text(transcript)
-                st.text_area("Summary", summary, height=150)
+            if 'summary' not in st.session_state:
+                if st.button('Summarize Transcript'):
+                    summary = summarize_text(transcript)
+                    st.session_state['summary'] = summary  # Store summary in session state
+            if 'summary' in st.session_state:
+                st.text_area("Summary", st.session_state['summary'], height=150)
                 if st.button('Convert Summary to Audio'):
-                    audio_file = text_to_audio(summary)
+                    audio_file = text_to_audio(st.session_state['summary'])
                     st.audio(audio_file)
                     with open(audio_file, "rb") as file:
-                        btn = st.download_button(
+                        st.download_button(
                             label="Download Summary Audio",
                             data=file,
                             file_name=audio_file,
