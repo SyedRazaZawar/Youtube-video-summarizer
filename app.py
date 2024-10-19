@@ -9,7 +9,7 @@ from youtube_transcript_api.formatters import SRTFormatter
 # API URLs and headers for Hugging Face
 API_URL_SUMMARIZATION = "https://api-inference.huggingface.co/models/sshleifer/distilbart-cnn-12-6"
 API_URL_TTS = "https://api-inference.huggingface.co/models/espnet/kan-bayashi_ljspeech_vits"
-headers = {"Authorization": "Bearer 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"}
+headers = {"Authorization": "Bearer your_token_here"}
 
 # Streamlit webpage configuration
 st.set_page_config(page_title="YouTube Caption, Summarizer, and TTS", layout="wide")
@@ -84,14 +84,19 @@ def main():
                 min_length = st.sidebar.slider("Min Length", 10, 500, 50)
                 max_length = st.sidebar.slider("Max Length", 50, 1000, 200)
 
-                if st.button("Summarize Captions"):
+                # Button to trigger summarization
+                summarize_button = st.button("Summarize Captions")
+                if summarize_button or st.session_state.get('summary_requested', False):
+                    st.session_state['summary_requested'] = True  # Persist state across reruns
                     with st.spinner('Summarizing...'):
                         output = query_summarization_api(captions, min_length, max_length)
                         if output and 'summary_text' in output:
                             summary = output['summary_text']
                             st.text_area("Summary", summary, height=200)
 
-                            if st.button("Generate Audio for Summary"):
+                            # Button to trigger TTS
+                            tts_button = st.button("Generate Audio for Summary")
+                            if tts_button:
                                 with st.spinner('Generating audio...'):
                                     audio_data = query_tts_api(summary)
                                     if audio_data:
