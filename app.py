@@ -9,7 +9,7 @@ from youtube_transcript_api.formatters import SRTFormatter
 # API URLs and headers for Hugging Face
 API_URL_SUMMARIZATION = "https://api-inference.huggingface.co/models/facebook/bart-large-cnn"
 API_URL_TTS = "https://api-inference.huggingface.co/models/espnet/kan-bayashi_ljspeech_vits"
-headers = {"Authorization": "Bearer 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"}  # Replace 'your_hf_API_token' with your actual token.
+headers = {"Authorization": "Bearer your_hf_API_token"}  # Replace 'your_hf_API_token' with your actual Hugging Face API token.
 
 # Streamlit webpage configuration
 st.set_page_config(page_title="YouTube Caption, Summarizer, and TTS", layout="wide")
@@ -45,9 +45,11 @@ def fetch_captions(video_id):
         return "", False
 
 def query_summarization_api(text, min_length, max_length):
+    # Ensure the text length does not exceed a certain threshold
+    truncated_text = text[:max_length]  # Adjust as necessary based on your model's capabilities
     try:
         json_payload = {
-            "inputs": text,
+            "inputs": truncated_text,
             "parameters": {
                 "min_length": min_length,
                 "max_length": max_length,
@@ -89,8 +91,8 @@ def main():
             if captions_fetched:
                 st.text_area("Captions", captions, height=300)
 
-                min_length = st.sidebar.slider("Min Length", 10, 500, 50)
-                max_length = st.sidebar.slider("Max Length", 50, 1000, 200)
+                min_length = st.sidebar.slider("Min Length", 10, 100, 50)
+                max_length = st.sidebar.slider("Max Length", 101, 1000, 150)  # Adjust these limits as necessary
 
                 if st.button("Summarize Captions"):
                     with st.spinner('Summarizing...'):
