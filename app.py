@@ -1,7 +1,7 @@
 import streamlit as st
 from youtube_transcript_api import YouTubeTranscriptApi
 from transformers import pipeline
-from gtTTS import gTTS
+from gtts import gTTS
 import os
 
 # Streamlit app layout
