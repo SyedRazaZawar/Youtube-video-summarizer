@@ -4,14 +4,14 @@ from transformers import pipeline
 from gtts import gTTS
 import os
 
-# Streamlit app layout
+# Set up the title of the Streamlit app
 st.title('YouTube Video Transcript Summarizer and Audio Converter')
 
-# Input for YouTube video URL
+# User input for YouTube video URL
 video_url = st.text_input('Enter YouTube video URL:', '')
 
 def get_video_id(url):
-    # Extracting video ID from URL
+    """Extract video ID from YouTube URL."""
     if "youtube.com" in url:
         return url.split("v=")[1].split("&")[0]
     elif "youtu.be" in url:
@@ -19,8 +19,8 @@ def get_video_id(url):
     return None
 
 def fetch_transcript(video_id):
+    """Fetch transcript for a given YouTube video ID."""
     try:
-        # Fetching the transcript
         transcript = YouTubeTranscriptApi.get_transcript(video_id)
         full_text = ' '.join([text['text'] for text in transcript])
         return full_text
@@ -28,12 +28,13 @@ def fetch_transcript(video_id):
         return str(e)
 
 def summarize_text(text):
-    # Load summarization model
+    """Generate a summary of the provided text."""
     summarizer = pipeline("summarization")
     summary = summarizer(text, max_length=130, min_length=30, do_sample=False)
     return summary[0]['summary_text']
 
 def text_to_audio(text):
+    """Convert text to speech."""
     tts = gTTS(text=text, lang='en')
     audio_file = 'summary_audio.mp3'
     tts.save(audio_file)
@@ -45,10 +46,10 @@ if st.button('Fetch Transcript'):
         transcript = fetch_transcript(video_id)
         if transcript:
             st.text_area("Transcript", transcript, height=250)
+            # The button to summarize is displayed only if there is no summary in session state
             if 'summary' not in st.session_state:
                 if st.button('Summarize Transcript'):
-                    summary = summarize_text(transcript)
-                    st.session_state['summary'] = summary  # Store summary in session state
+                    st.session_state['summary'] = summarize_text(transcript)
             if 'summary' in st.session_state:
                 st.text_area("Summary", st.session_state['summary'], height=150)
                 if st.button('Convert Summary to Audio'):
@@ -62,6 +63,6 @@ if st.button('Fetch Transcript'):
                             mime='audio/mp3'
                         )
 
-# Ensure local assets directory exists for saving audio files
+# Creating a directory to store audio files, if it doesn't exist
 if not os.path.exists('audio'):
     os.makedirs('audio')
