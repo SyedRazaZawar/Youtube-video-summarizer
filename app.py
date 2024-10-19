@@ -1,68 +1,64 @@
 import streamlit as st
-from pytube import YouTube
-from PIL import Image
-import requests
-from io import BytesIO
-from youtube_transcript_api import YouTubeTranscriptApi, NoTranscriptFound, TranscriptsDisabled
-from youtube_transcript_api.formatters import SRTFormatter
-import time
+from youtube_transcript_api import YouTubeTranscriptApi
+from transformers import pipeline
+from gtts import gTTS
+import os
 
-# Define exponential backoff
-def retry_with_exponential_backoff(func, max_retries=5, initial_wait=0.5, backoff_factor=2):
-    wait_time = initial_wait
-    retries = 0
-    while retries < max_retries:
-        try:
-            return func()
-        except (NoTranscriptFound, TranscriptsDisabled) as e:
-            retries += 1
-            time.sleep(wait_time)
-            wait_time *= backoff_factor
-            if retries == max_retries:
-                st.error(f"Failed to fetch captions after {max_retries} attempts.")
-                return None
-            else:
-                st.warning("Retrying to fetch captions...")
+# Streamlit app layout
+st.title('YouTube Video Transcript Summarizer and Audio Converter')
 
-# Function to fetch captions with retries
-def fetch_captions_with_retries(video_id, language_code='en'):
-    def fetch():
-        transcript_list = YouTubeTranscriptApi.list_transcripts(video_id)
-        transcript = transcript_list.find_transcript([language_code])
-        formatter = SRTFormatter()
-        return formatter.format_transcript(transcript.fetch())
-    
-    return retry_with_exponential_backoff(fetch)
+# Input for YouTube video URL
+video_url = st.text_input('Enter YouTube video URL:', '')
 
-# Modify the main function to use fetch_captions_with_retries
-def main():
-    st.title("YouTube Caption, Summarizer, and TTS")
-    # [The rest of your Streamlit code remains the same]
+def get_video_id(url):
+    # Extracting video ID from URL
+    if "youtube.com" in url:
+        return url.split("v=")[1].split("&")[0]
+    elif "youtu.be" in url:
+        return url.split("/")[-1]
+    return None
 
-    # Fetch and store captions in session state with retries
-    if st.button("Fetch Video Info"):
-        if url:
-            video_id, thumbnail_url = fetch_video_info(url)
-            if video_id:
-                st.session_state['video_id'] = video_id
-                available_languages = fetch_available_languages(video_id)
-                if available_languages:
-                    st.session_state['available_languages'] = available_languages
-                    language_options = list(available_languages.values())
-                    selected_language = st.selectbox("Select Caption Language", language_options)
-                    selected_language_code = list(available_languages.keys())[language_options.index(selected_language)]
-                    captions = fetch_captions_with_retries(video_id, selected_language_code)
-                    if captions:
-                        st.session_state['captions'] = captions
-                        st.session_state['summary'] = ""  # Reset summary when new captions are fetched
-                    else:
-                        st.error("Failed to fetch captions in the selected language.")
-                else:
-                    st.warning("No available captions for this video.")
-            else:
-                st.error("Failed to fetch video data. Check the provided URL.")
+def fetch_transcript(video_id):
+    try:
+        # Fetching the transcript
+        transcript = YouTubeTranscriptApi.get_transcript(video_id)
+        full_text = ' '.join([text['text'] for text in transcript])
+        return full_text
+    except Exception as e:
+        return str(e)
 
-# Include the retry mechanism wherever you are calling API functions that might fail.
+def summarize_text(text):
+    # Load summarization model
+    summarizer = pipeline("summarization")
+    summary = summarizer(text, max_length=130, min_length=30, do_sample=False)
+    return summary[0]['summary_text']
 
-if __name__ == "__main__":
-    main()
+def text_to_audio(text):
+    tts = gTTS(text=text, lang='en')
+    audio_file = 'summary_audio.mp3'
+    tts.save(audio_file)
+    return audio_file
+
+if st.button('Fetch Transcript'):
+    video_id = get_video_id(video_url)
+    if video_id:
+        transcript = fetch_transcript(video_id)
+        if transcript:
+            st.text_area("Transcript", transcript, height=250)
+            if st.button('Summarize Transcript'):
+                summary = summarize_text(transcript)
+                st.text_area("Summary", summary, height=150)
+                if st.button('Convert Summary to Audio'):
+                    audio_file = text_to_audio(summary)
+                    st.audio(audio_file)
+                    with open(audio_file, "rb") as file:
+                        btn = st.download_button(
+                            label="Download Summary Audio",
+                            data=file,
+                            file_name=audio_file,
+                            mime='audio/mp3'
+                        )
+
+# Ensure local assets directory exists for saving audio files
+if not os.path.exists('audio'):
+    os.makedirs('audio')
