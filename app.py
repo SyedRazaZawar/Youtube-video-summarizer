@@ -9,7 +9,7 @@ from youtube_transcript_api.formatters import SRTFormatter
 # API URLs and headers for Hugging Face
 API_URL_SUMMARIZATION = "https://api-inference.huggingface.co/models/sshleifer/distilbart-cnn-12-6"
 API_URL_TTS = "https://api-inference.huggingface.co/models/espnet/kan-bayashi_ljspeech_vits"
-headers = {"Authorization": "Bearer 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"}
+headers = {"Authorization": "Bearer your_token_here"}  # Replace 'your_token_here' with your actual token.
 
 # Streamlit webpage configuration
 st.set_page_config(page_title="YouTube Caption, Summarizer, and TTS", layout="wide")
@@ -50,7 +50,7 @@ def query_summarization_api(text, min_length, max_length):
         if response.status_code == 200:
             return response.json()
         else:
-            st.error(f"API error: {response.status_code}, {response.text}")
+            st.error(f"API error: {response.status_code} - {response.text}")
             return None
     except Exception as e:
         st.error(f"Failed to call summarization API: {str(e)}")
@@ -62,7 +62,7 @@ def query_tts_api(text):
         if response.status_code == 200:
             return response.content  # Binary audio data
         else:
-            st.error(f"API error: {response.status_code}, {response.text}")
+            st.error(f"API error: {response.status_code} - {response.text}")
             return None
     except Exception as e:
         st.error(f"Failed to call TTS API: {str(e)}")
@@ -84,27 +84,27 @@ def main():
                 min_length = st.sidebar.slider("Min Length", 10, 500, 50)
                 max_length = st.sidebar.slider("Max Length", 50, 1000, 200)
 
-                # Button to trigger summarization
-                summarize_button = st.button("Summarize Captions")
-                if summarize_button or st.session_state.get('summary_requested', False):
-                    st.session_state['summary_requested'] = True  # Persist state across reruns
+                if st.button("Summarize Captions"):
                     with st.spinner('Summarizing...'):
                         output = query_summarization_api(captions, min_length, max_length)
                         if output and 'summary_text' in output:
-                            summary = output['summary_text']
-                            st.text_area("Summary", summary, height=200)
+                            st.session_state['summary'] = output['summary_text']
+                        else:
+                            st.session_state['summary'] = "Failed to get a valid response from the summarization API."
+                    
+                if 'summary' in st.session_state:
+                    st.text_area("Summary", st.session_state['summary'], height=200)
 
-                            # Button to trigger TTS
-                            tts_button = st.button("Generate Audio for Summary")
-                            if tts_button:
-                                with st.spinner('Generating audio...'):
-                                    audio_data = query_tts_api(summary)
-                                    if audio_data:
-                                        audio_file_path = "summary_audio.wav"
-                                        with open(audio_file_path, "wb") as f:
-                                            f.write(audio_data)
-                                        st.audio(audio_file_path)
-                                        st.download_button("Download Audio", audio_data, file_name="summary_audio.wav", mime="audio/wav")
+                if st.session_state.get('summary'):
+                    if st.button("Generate Audio for Summary"):
+                        with st.spinner('Generating audio...'):
+                            audio_data = query_tts_api(st.session_state['summary'])
+                            if audio_data:
+                                audio_file_path = "summary_audio.wav"
+                                with open(audio_file_path, "wb") as f:
+                                    f.write(audio_data)
+                                st.audio(audio_file_path)
+                                st.download_button("Download Audio", audio_data, file_name="summary_audio.wav", mime="audio/wav")
         else:
             st.error("Failed to fetch video data. Check the provided URL.")
 
