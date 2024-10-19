@@ -9,7 +9,7 @@ from youtube_transcript_api.formatters import SRTFormatter
 # API URLs and headers for Hugging Face
 API_URL_SUMMARIZATION = "https://api-inference.huggingface.co/models/facebook/bart-large-cnn"
 API_URL_TTS = "https://api-inference.huggingface.co/models/espnet/kan-bayashi_ljspeech_vits"
-headers = {"Authorization": "Bearer your_hf_API_token"}  # Replace 'your_hf_API_token' with your actual token.
+headers = {"Authorization": "Bearer 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"}  # Replace 'your_hf_API_token' with your actual token.
 
 # Streamlit webpage configuration
 st.set_page_config(page_title="YouTube Caption, Summarizer, and TTS", layout="wide")
