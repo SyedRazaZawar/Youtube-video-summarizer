@@ -39,12 +39,9 @@ def fetch_captions(video_id):
         transcript = transcript_list.find_transcript(['en'])
         formatter = SRTFormatter()
         return formatter.format_transcript(transcript.fetch())
-    except (NoTranscriptFound, TranscriptsDisabled) as e:
-        st.warning(f"No available captions for this video. {str(e)}")
-        return ""
-    except Exception as e:
-        st.error(f"An error occurred while fetching captions: {str(e)}")
-        return ""
+    except (NoTranscriptFound, TranscriptsDisabled):
+        st.warning("No available captions or transcripts are disabled for this video.")
+        return None
 
 def query_summarization_api(text, min_length, max_length):
     try:
@@ -72,37 +69,38 @@ def main():
             st.session_state['video_id'] = video_id
             display_thumbnail(thumbnail_url)
 
-            if 'captions' not in st.session_state or st.button("Fetch Captions"):
-                st.session_state['captions'] = fetch_captions(video_id)
+            captions = fetch_captions(video_id)
+            if captions is None:  # If fetching captions fails
+                captions = st.text_area("Enter captions manually:", height=300)
+                st.session_state['captions'] = captions
 
-            if st.session_state['captions']:
-                st.text_area("Captions", st.session_state['captions'], height=300)
+            if captions:
+                st.text_area("Captions", captions, height=300)
+                st.session_state['captions'] = captions
 
                 min_length = st.sidebar.slider("Min Length", 10, 500, 50)
                 max_length = st.sidebar.slider("Max Length", 50, 1000, 200)
 
                 if st.button("Summarize Captions"):
                     with st.spinner('Summarizing...'):
-                        output = query_summarization_api(st.session_state['captions'], min_length, max_length)
+                        output = query_summarization_api(captions, min_length, max_length)
                         if output and 'summary_text' in output:
                             st.session_state['summary'] = output['summary_text']
+                            st.text_area("Summary", st.session_state['summary'], height=200)
 
-                if 'summary' in st.session_state and st.session_state['summary']:
-                    st.text_area("Summary", st.session_state['summary'], height=200)
-
-                    if st.button("Generate Audio for Summary"):
-                        with st.spinner('Generating audio...'):
-                            audio_data = query_tts_api(st.session_state['summary'])
-                            if audio_data:
-                                audio_file_path = "summary_audio.wav"
-                                with open(audio_file_path, "wb") as f:
-                                    f.write(audio_data)
-                                st.audio(audio_file_path)
-                                st.download_button("Download Audio", audio_data, file_name="summary_audio.wav", mime="audio/wav")
-                            else:
-                                st.error("Failed to generate audio.")
-        else:
-            st.error("Failed to fetch video data. Check the provided URL.")
+                            if st.button("Generate Audio for Summary"):
+                                with st.spinner('Generating audio...'):
+                                    audio_data = query_tts_api(st.session_state['summary'])
+                                    if audio_data:
+                                        audio_file_path = "summary_audio.wav"
+                                        with open(audio_file_path, "wb") as f:
+                                            f.write(audio_data)
+                                        st.audio(audio_file_path)
+                                        st.download_button("Download Audio", audio_data, file_name="summary_audio.wav", mime="audio/wav")
+                                    else:
+                                        st.error("Failed to generate audio.")
+                else:
+                    st.error("Failed to fetch video data. Check the provided URL.")
 
 if __name__ == "__main__":
     main()
