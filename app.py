@@ -39,17 +39,21 @@ def text_to_audio(text):
     tts.save(audio_file)
     return audio_file
 
-if st.button('Fetch Transcript'):
+video_id = None
+if video_url:
     video_id = get_video_id(video_url)
-    if video_id:
-        transcript = fetch_transcript(video_id)
-        if transcript:
-            st.text_area("Transcript", transcript, height=250)
 
-# Summarize transcript button and summary display
+if video_id:
+    if st.button('Fetch Transcript'):
+        transcript = fetch_transcript(video_id)
+        st.session_state['transcript'] = transcript  # Store transcript in session state
+
 if 'transcript' in st.session_state:
+    st.text_area("Transcript", st.session_state['transcript'], height=250)
+
     if st.button('Summarize Transcript'):
-        st.session_state['summary'] = summarize_text(st.session_state['transcript'])
+        summary = summarize_text(st.session_state['transcript'])
+        st.session_state['summary'] = summary  # Store summary in session state
 
 if 'summary' in st.session_state:
     st.text_area("Summary", st.session_state['summary'], height=150)
