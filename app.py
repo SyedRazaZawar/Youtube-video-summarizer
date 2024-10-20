@@ -104,6 +104,16 @@ def retry_until_success(video_id, selected_language_code):
             st.warning(f"Transcripts not available yet. Retrying in 10 seconds...")
             time.sleep(10)
 
+# Function to call Hugging Face Summarization API
+def query_summarization_api(text, min_length, max_length):
+    response = requests.post(API_URL_SUMMARIZATION, headers=headers, json={"inputs": text, "parameters": {"min_length": min_length, "max_length": max_length}})
+    return response.json()
+
+# Function to call Hugging Face Text-to-Speech API
+def query_tts_api(text):
+    response = requests.post(API_URL_TTS, headers=headers, json={"inputs": text})
+    return response.content  # Binary audio data
+
 # Main function to handle UI and functionality
 def main():
     st.title("YouTube Caption, Summarizer, and TTS")
