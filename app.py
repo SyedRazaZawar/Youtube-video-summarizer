@@ -10,7 +10,7 @@ import time  # To add a delay between retries
 # API URLs and headers for Hugging Face
 API_URL_SUMMARIZATION = "https://api-inference.huggingface.co/models/sshleifer/distilbart-cnn-12-6"
 API_URL_TTS = "https://api-inference.huggingface.co/models/espnet/kan-bayashi_ljspeech_vits"
-headers = {"Authorization": "Bearer YOUR_HUGGINGFACE_API_KEY"}  # Replace with your actual Hugging Face API Key
+headers = {"Authorization": "Bearer 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"}  # Replace with your actual Hugging Face API Key
 
 # Function to fetch video info and thumbnail
 def fetch_video_info(url):
