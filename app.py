@@ -62,9 +62,7 @@ def fetch_available_languages(video_id):
         languages = {transcript.language_code: transcript.language for transcript in transcript_list}
         return languages
     except (NoTranscriptFound, TranscriptsDisabled):
-        transcript_list = YouTubeTranscriptApi.list_transcripts(video_id)
-        languages = {transcript.language_code: transcript.language for transcript in transcript_list}
-        return languages
+        st.warning("No Caption found try again")
 
 # Function to fetch captions
 def fetch_captions(video_id, language_code='en'):
