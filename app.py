@@ -10,7 +10,7 @@ import time  # To add a delay between retries
 # API URLs and headers for Hugging Face
 API_URL_SUMMARIZATION = "https://api-inference.huggingface.co/models/sshleifer/distilbart-cnn-12-6"
 API_URL_TTS = "https://api-inference.huggingface.co/models/espnet/kan-bayashi_ljspeech_vits"
-headers = {"Authorization": "Bearer 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"}  # Replace with your actual Hugging Face API Key
+headers = {"Authorization": "Bearer YOUR_HUGGINGFACE_API_KEY"}  # Replace with your actual Hugging Face API Key
 
 # Function to fetch video info and thumbnail
 def fetch_video_info(url):
@@ -76,16 +76,6 @@ def fetch_captions(video_id, language_code='en'):
     except Exception as e:
         return ""  # If no captions available, return an empty string
 
-# Function to call Hugging Face Summarization API
-def query_summarization_api(text, min_length, max_length):
-    response = requests.post(API_URL_SUMMARIZATION, headers=headers, json={"inputs": text, "parameters": {"min_length": min_length, "max_length": max_length}})
-    return response.json()
-
-# Function to call Hugging Face Text-to-Speech API
-def query_tts_api(text):
-    response = requests.post(API_URL_TTS, headers=headers, json={"inputs": text})
-    return response.content  # Binary audio data
-
 # Function to automatically fetch captions until successful
 def fetch_transcripts_automatically(video_id, selected_language_code):
     retry_count = 0
@@ -103,6 +93,16 @@ def fetch_transcripts_automatically(video_id, selected_language_code):
 
     st.error("Failed to fetch captions after multiple attempts.")
     return ""
+
+# Keep retrying until transcripts are successfully fetched
+def retry_until_success(video_id, selected_language_code):
+    while True:
+        captions = fetch_captions(video_id, selected_language_code)
+        if captions:
+            return captions
+        else:
+            st.warning(f"Transcripts not available yet. Retrying in 10 seconds...")
+            time.sleep(10)
 
 # Main function to handle UI and functionality
 def main():
@@ -144,8 +144,8 @@ def main():
                     selected_language = st.selectbox("Select Caption Language", language_options)
                     selected_language_code = list(available_languages.keys())[language_options.index(selected_language)]
 
-                    # Fetch and store captions in session state, try until successful
-                    captions = fetch_transcripts_automatically(video_id, selected_language_code)
+                    # Automatically retry fetching transcripts until successful
+                    captions = retry_until_success(video_id, selected_language_code)
                     if captions:
                         st.session_state['captions'] = captions
                         st.session_state['summary'] = ""  # Reset summary when new captions are fetched
