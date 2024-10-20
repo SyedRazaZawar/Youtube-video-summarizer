@@ -76,6 +76,24 @@ def fetch_captions(video_id, language_code='en'):
         st.error(f"Error fetching captions: {str(e)}")
         return ""
 
+# Function to call Hugging Face Summarization API
+def query_summarization_api(text, min_length, max_length):
+    try:
+        response = requests.post(API_URL_SUMMARIZATION, headers=headers, json={"inputs": text, "parameters": {"min_length": min_length, "max_length": max_length}})
+        return response.json()
+    except Exception as e:
+        st.error(f"Summarization API Error: {str(e)}")
+        return {}
+
+# Function to call Hugging Face Text-to-Speech API
+def query_tts_api(text):
+    try:
+        response = requests.post(API_URL_TTS, headers=headers, json={"inputs": text})
+        return response.content  # Binary audio data
+    except Exception as e:
+        st.error(f"TTS API Error: {str(e)}")
+        return None
+
 # Main function to handle UI and functionality
 def main():
     st.title("YouTube Caption, Summarizer, and TTS")
