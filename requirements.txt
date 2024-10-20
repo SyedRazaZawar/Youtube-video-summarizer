@@ -6,5 +6,5 @@ youtube_transcript_api==0.6.2
 transformers
 gtts
 pydub
-torch==2.0.1
+torch==2.4.1
 torchvision==0.15.2
