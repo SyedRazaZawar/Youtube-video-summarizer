@@ -56,12 +56,17 @@ def display_thumbnail(url, video_id):
         st.error("Failed to display thumbnail: " + str(e))
 
 # Function to fetch available caption languages
-def fetch_available_languages(video_id):
+def fetch_available_languages(video_id, selected_language_code):
     try:
         transcript_list = YouTubeTranscriptApi.list_transcripts(video_id)
         languages = {transcript.language_code: transcript.language for transcript in transcript_list}
         return languages
     except (NoTranscriptFound, TranscriptsDisabled):
+        # Attempt retry for fetching captions if no transcript is found
+        captions = retry_until_success(video_id, selected_language_code)
+        if captions:
+            st.session_state['captions'] = captions
+            return captions
         return {}
 
 # Function to fetch captions
@@ -136,7 +141,7 @@ def main():
                 st.session_state['video_id'] = video_id
                
                 # Fetch available languages
-                available_languages = fetch_available_languages(video_id)
+                available_languages = fetch_available_languages(video_id, 'en')
                 if available_languages:
                     st.session_state['available_languages'] = available_languages
                     language_options = list(available_languages.values())
