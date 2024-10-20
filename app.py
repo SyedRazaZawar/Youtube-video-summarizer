@@ -83,7 +83,7 @@ def fetch_captions(video_id, language_code='en'):
 # Function to automatically fetch captions until successful
 def retry_until_success(video_id, selected_language_code):
     retry_count = 0
-    max_retries = 30  # Limit the number of retries
+    max_retries = 300  # Limit the number of retries
     wait_time = 2  # Wait time between retries in seconds
 
     while retry_count < max_retries:
