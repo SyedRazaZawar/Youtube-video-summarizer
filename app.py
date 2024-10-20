@@ -89,8 +89,8 @@ def query_tts_api(text):
 # Function to automatically fetch captions until successful
 def fetch_transcripts_automatically(video_id, selected_language_code):
     retry_count = 0
-    max_retries = 5  # Limit the number of retries
-    wait_time = 10  # Wait time between retries in seconds
+    max_retries = 1  # Limit the number of retries
+    wait_time = 1  # Wait time between retries in seconds
 
     while retry_count < max_retries:
         captions = fetch_captions(video_id, selected_language_code)
