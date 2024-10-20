@@ -62,7 +62,7 @@ def fetch_available_languages(video_id):
         languages = {transcript.language_code: transcript.language for transcript in transcript_list}
         return languages
     except (NoTranscriptFound, TranscriptsDisabled):
-        st.warning("No transcripts available for this video.")
+        st.warning("Please click on fetch video button again. I'm loading your transcripts.It will take time for extraction due to heavy load on the server.")
         return {}
 
 # Function to fetch captions
@@ -162,7 +162,7 @@ def main():
                     else:
                         st.error("Failed to fetch captions in the selected language.")
                 else:
-                    st.warning("No available captions for this video.")
+                    st.warning("Please Click the Fetch video Info button again. I'm trying. Thanks for your cooperation !!!")
             else:
                 st.error("Failed to fetch video data. Check the provided URL.")
     
