@@ -62,8 +62,9 @@ def fetch_available_languages(video_id):
         languages = {transcript.language_code: transcript.language for transcript in transcript_list}
         return languages
     except (NoTranscriptFound, TranscriptsDisabled):
-        st.warning("Please click on fetch video button again. I'm loading your transcripts.It will take time for extraction due to heavy load on the server.")
-        return {}
+        transcript_list = YouTubeTranscriptApi.list_transcripts(video_id)
+        languages = {transcript.language_code: transcript.language for transcript in transcript_list}
+        return languages
 
 # Function to fetch captions
 def fetch_captions(video_id, language_code='en'):
@@ -159,8 +160,7 @@ def main():
                     if captions:
                         st.session_state['captions'] = captions
                         st.session_state['summary'] = ""  # Reset summary when new captions are fetched
-                    else:
-                        st.error("Failed to fetch captions in the selected language.")
+                    
                 else:
                     st.warning("Please Click the Fetch video Info button again. I'm trying. Thanks for your cooperation !!!")
             else:
