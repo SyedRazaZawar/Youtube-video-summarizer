@@ -62,22 +62,7 @@ def fetch_available_languages(video_id):
         languages = {transcript.language_code: transcript.language for transcript in transcript_list}
         return languages
     except (NoTranscriptFound, TranscriptsDisabled):
-        def retry_until_success(video_id, selected_language_code):
-        retry_count = 0
-        max_retries = 5  # Limit the number of retries
-        wait_time = 10  # Wait time between retries in seconds
-
-        while retry_count < max_retries:
-            captions = fetch_captions(video_id, selected_language_code)
-            if captions:
-                return captions
-            else:
-                st.warning(f"Attempt {retry_count+1}: Captions not available yet. Retrying in {wait_time} seconds...")
-                retry_count += 1
-                time.sleep(wait_time)  # Wait for a few seconds before retrying
-
-        st.error("Failed to fetch captions after multiple attempts.")
-        return ""
+        return {}
 
 # Function to fetch captions
 def fetch_captions(video_id, language_code='en'):
