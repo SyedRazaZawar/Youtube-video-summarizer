@@ -59,7 +59,7 @@ def display_thumbnail(url, video_id):
 def fetch_available_languages(video_id):
     try:
         transcript_list = YouTubeTranscriptApi.list_transcripts(video_id)
-        languages = {transcript.language for transcript in transcript_list}
+        languages = {transcript.language_code: transcript.language for transcript in transcript_list}
         return languages
     except (NoTranscriptFound, TranscriptsDisabled):
         st.warning("No transcripts available for this video.")
@@ -207,4 +207,4 @@ def main():
                     st.error("Failed to generate audio.")
 
 if __name__ == "__main__":
-    main()  
+    main()
