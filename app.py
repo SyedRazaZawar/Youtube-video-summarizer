@@ -160,6 +160,10 @@ def main():
                     if captions:
                         st.session_state['captions'] = captions
                         st.session_state['summary'] = ""  # Reset summary when new captions are fetched
+
+                    else:
+                        st.warning("Click on fetch video info button again")
+                        
                     
                 else:
                     st.warning("Please Click the Fetch video Info button again. I'm trying. Thanks for your cooperation !!!")
