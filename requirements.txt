@@ -7,4 +7,5 @@ transformers
 gtts
 pydub
 torch==2.4.1
-torchvision==0.15.2
+torchvision==0.20.0
+
