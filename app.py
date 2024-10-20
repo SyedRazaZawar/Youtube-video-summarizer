@@ -56,12 +56,17 @@ def display_thumbnail(url, video_id):
         st.error("Failed to display thumbnail: " + str(e))
 
 # Function to fetch available caption languages
-def fetch_available_languages(video_id):
+def fetch_available_languages(video_id, selected_language_code):
     try:
         transcript_list = YouTubeTranscriptApi.list_transcripts(video_id)
         languages = {transcript.language_code: transcript.language for transcript in transcript_list}
         return languages
     except (NoTranscriptFound, TranscriptsDisabled):
+        # Attempt retry for fetching captions if no transcript is found
+        captions = retry_until_success(video_id, selected_language_code)
+        if captions:
+            st.session_state['captions'] = captions
+            return captions
         return {}
 
 # Function to fetch captions
@@ -73,26 +78,35 @@ def fetch_captions(video_id, language_code='en'):
         srt = formatter.format_transcript(transcript.fetch())
         return srt
     except Exception as e:
-        st.error(f"Error fetching captions: {str(e)}")
-        return ""
+        return ""  # If no captions available, return an empty string
+
+# Function to automatically fetch captions until successful
+def retry_until_success(video_id, selected_language_code):
+    retry_count = 0
+    max_retries = 5  # Limit the number of retries
+    wait_time = 10  # Wait time between retries in seconds
+
+    while retry_count < max_retries:
+        captions = fetch_captions(video_id, selected_language_code)
+        if captions:
+            return captions
+        else:
+            st.warning(f"Attempt {retry_count+1}: Captions not available yet. Retrying in {wait_time} seconds...")
+            retry_count += 1
+            time.sleep(wait_time)  # Wait for a few seconds before retrying
+
+    st.error("Failed to fetch captions after multiple attempts.")
+    return ""
 
 # Function to call Hugging Face Summarization API
 def query_summarization_api(text, min_length, max_length):
-    try:
-        response = requests.post(API_URL_SUMMARIZATION, headers=headers, json={"inputs": text, "parameters": {"min_length": min_length, "max_length": max_length}})
-        return response.json()
-    except Exception as e:
-        st.error(f"Summarization API Error: {str(e)}")
-        return {}
+    response = requests.post(API_URL_SUMMARIZATION, headers=headers, json={"inputs": text, "parameters": {"min_length": min_length, "max_length": max_length}})
+    return response.json()
 
 # Function to call Hugging Face Text-to-Speech API
 def query_tts_api(text):
-    try:
-        response = requests.post(API_URL_TTS, headers=headers, json={"inputs": text})
-        return response.content  # Binary audio data
-    except Exception as e:
-        st.error(f"TTS API Error: {str(e)}")
-        return None
+    response = requests.post(API_URL_TTS, headers=headers, json={"inputs": text})
+    return response.content  # Binary audio data
 
 # Main function to handle UI and functionality
 def main():
@@ -127,35 +141,41 @@ def main():
                 st.session_state['video_id'] = video_id
                
                 # Fetch available languages
-                available_languages = fetch_available_languages(video_id)
+                available_languages = fetch_available_languages(video_id, 'en')
                 if available_languages:
                     st.session_state['available_languages'] = available_languages
                     language_options = list(available_languages.values())
                     selected_language = st.selectbox("Select Caption Language", language_options)
                     selected_language_code = list(available_languages.keys())[language_options.index(selected_language)]
 
-                    # Fetch captions
-                    captions = fetch_captions(video_id, selected_language_code)
+                    # Automatically retry fetching transcripts until successful
+                    captions = retry_until_success(video_id, selected_language_code)
                     if captions:
                         st.session_state['captions'] = captions
                         st.session_state['summary'] = ""  # Reset summary when new captions are fetched
+
                     else:
-                        st.warning("No captions available for the selected language.")
+                        st.warning("Click on fetch video info button again")
                         
+                    
                 else:
-                    st.warning("No captions available for this video.")
+                    st.warning("Please Click the Fetch video Info button again. I'm trying. Thanks for your cooperation !!!")
             else:
                 st.error("Failed to fetch video data. Check the provided URL.")
     
     # Display the thumbnail if the video_id is valid
-    if url and st.session_state['video_id']:
+    if url:
         video_id, thumbnail_url = fetch_video_info(url)
-        if thumbnail_url:
-            display_thumbnail(thumbnail_url, video_id)
+        if video_id:
+            st.session_state['video_id'] = video_id
+            if thumbnail_url:
+                display_thumbnail(thumbnail_url, video_id)
+            else:
+                st.warning("No thumbnail available for this video.")
     
     # Display captions if already fetched
     if st.session_state['captions']:
-        st.text_area("Captions", st.session_state['captions'], height=300)
+        st.text_area("Captions", st.session_state['captions'], height=300, key="captions_area_display")
 
         # Summarize Captions Button
         if st.button("Summarize Captions"):
@@ -171,7 +191,7 @@ def main():
     # Display summary if available
     if st.session_state['summary']:
         st.subheader("Summary:")
-        st.text_area("Summary", st.session_state['summary'], height=200)
+        st.text_area("Summary", st.session_state['summary'], height=200, key="summary_area")
 
         # Text-to-Speech Button
         if st.button("Generate Audio for Summary"):
@@ -193,5 +213,4 @@ def main():
                 else:
                     st.error("Failed to generate audio.")
 
-if __name__ == "__main__":
-    main()
+if _name_ == "_main_"
