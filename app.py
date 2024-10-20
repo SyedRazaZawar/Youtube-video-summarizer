@@ -62,7 +62,7 @@ def fetch_available_languages(video_id):
         languages = {transcript.language_code: transcript.language for transcript in transcript_list}
         return languages
     except (NoTranscriptFound, TranscriptsDisabled):
-        st.warning("No Caption found try again")
+        return {}
 
 # Function to fetch captions
 def fetch_captions(video_id, language_code='en'):
@@ -76,7 +76,7 @@ def fetch_captions(video_id, language_code='en'):
         return ""  # If no captions available, return an empty string
 
 # Function to automatically fetch captions until successful
-def fetch_transcripts_automatically(video_id, selected_language_code):
+def retry_until_success(video_id, selected_language_code):
     retry_count = 0
     max_retries = 5  # Limit the number of retries
     wait_time = 10  # Wait time between retries in seconds
@@ -92,16 +92,6 @@ def fetch_transcripts_automatically(video_id, selected_language_code):
 
     st.error("Failed to fetch captions after multiple attempts.")
     return ""
-
-# Keep retrying until transcripts are successfully fetched
-def retry_until_success(video_id, selected_language_code):
-    while True:
-        captions = fetch_captions(video_id, selected_language_code)
-        if captions:
-            return captions
-        else:
-            st.warning(f"Transcripts not available yet. Retrying in 10 seconds...")
-            time.sleep(10)
 
 # Function to call Hugging Face Summarization API
 def query_summarization_api(text, min_length, max_length):
