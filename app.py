@@ -3,14 +3,14 @@ from pytube import YouTube
 from PIL import Image
 import requests
 from io import BytesIO
-from youtube_transcript_api import YouTubeTranscriptApi, NoTranscriptFound, TranscriptsDisabled
+from youtube_transcript_api import YouTubeTranscriptApi, NoTranscriptFound, TranscriptsDisabled, CouldNotRetrieveTranscript
 from youtube_transcript_api.formatters import SRTFormatter
 import time  # To add a delay between retries
 
 # API URLs and headers for Hugging Face
 API_URL_SUMMARIZATION = "https://api-inference.huggingface.co/models/sshleifer/distilbart-cnn-12-6"
 API_URL_TTS = "https://api-inference.huggingface.co/models/espnet/kan-bayashi_ljspeech_vits"
-headers = {"Authorization": "Bearer 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"}  # Replace with your actual Hugging Face API Key
+headers = {"Authorization": "Bearer YOUR_HUGGING_FACE_API_KEY"}  # Replace with your actual Hugging Face API Key
 
 # Function to fetch video info and thumbnail
 def fetch_video_info(url):
@@ -61,12 +61,7 @@ def fetch_available_languages(video_id, selected_language_code):
         transcript_list = YouTubeTranscriptApi.list_transcripts(video_id)
         languages = {transcript.language_code: transcript.language for transcript in transcript_list}
         return languages
-    except (NoTranscriptFound, TranscriptsDisabled):
-        # Attempt retry for fetching captions if no transcript is found
-        captions = retry_until_success(video_id, selected_language_code)
-        if captions:
-            st.session_state['captions'] = captions
-            return captions
+    except (NoTranscriptFound, TranscriptsDisabled, CouldNotRetrieveTranscript):
         return {}
 
 # Function to fetch captions
@@ -77,26 +72,9 @@ def fetch_captions(video_id, language_code='en'):
         formatter = SRTFormatter()
         srt = formatter.format_transcript(transcript.fetch())
         return srt
-    except Exception as e:
-        return ""  # If no captions available, return an empty string
-
-# Function to automatically fetch captions until successful
-def retry_until_success(video_id, selected_language_code):
-    retry_count = 0
-    max_retries = 300  # Limit the number of retries
-    wait_time = 2  # Wait time between retries in seconds
-
-    while retry_count < max_retries:
-        captions = fetch_captions(video_id, selected_language_code)
-        if captions:
-            return captions
-        else:
-            st.warning(f"Attempt {retry_count+1}: Captions not available yet. Retrying in {wait_time} seconds...")
-            retry_count += 1
-            time.sleep(wait_time)  # Wait for a few seconds before retrying
-
-    st.error("Failed to fetch captions after multiple attempts.")
-    return ""
+    except (NoTranscriptFound, TranscriptsDisabled, CouldNotRetrieveTranscript) as e:
+        st.error(f"Failed to retrieve captions: {e}")
+        return ""
 
 # Function to call Hugging Face Summarization API
 def query_summarization_api(text, min_length, max_length):
@@ -127,7 +105,7 @@ def main():
     min_length = st.sidebar.slider("Min Length", 10, 500, 50)
     max_length = st.sidebar.slider("Max Length", 50, 1000, 200)
 
-    st.warning("Please enter the link of the YouTube video which has English transcripts to avoid any error. Because at this time I have learned only English. Thanks for your cooperation.") 
+    st.warning("Please enter the link of the YouTube video which has English transcripts to avoid any error.") 
 
     # Get URL input
     url = st.text_input("Enter YouTube video URL", "")
@@ -149,17 +127,14 @@ def main():
                     selected_language_code = list(available_languages.keys())[language_options.index(selected_language)]
 
                     # Automatically retry fetching transcripts until successful
-                    captions = retry_until_success(video_id, selected_language_code)
+                    captions = fetch_captions(video_id, selected_language_code)
                     if captions:
                         st.session_state['captions'] = captions
                         st.session_state['summary'] = ""  # Reset summary when new captions are fetched
-
                     else:
-                        st.warning("Click on fetch video info button again")
-                        
-                    
+                        st.warning("No captions available in the selected language.")
                 else:
-                    st.warning("I'm trying my services best. Thanks for your cooperation !!!")
+                    st.warning("No available captions for this video.")
             else:
                 st.error("Failed to fetch video data. Check the provided URL.")
     
